@@ -106,9 +106,9 @@ class LivestreamerPlayer(object):
 
 
 
-class MainFrame(Tkinter.Frame):
+class MainFrame(ttk.Frame):
     def __init__(self, parent):
-        Tkinter.Frame.__init__(self, parent)
+        ttk.Frame.__init__(self, parent)
         self.parent = parent
         self.watching = False
         self.initUI()
@@ -125,7 +125,8 @@ class MainFrame(Tkinter.Frame):
             opts.sort()
             #set default quality to best
             self.quality_o.set('best')
-            self.quality_combobox.config(values=opts, state=Tkinter.NORMAL)
+            self.quality_combobox.config(values=opts)
+            self.quality_combobox.state(["!disabled"])
 
         def stop_stream():
             if self.watching:
@@ -149,29 +150,32 @@ class MainFrame(Tkinter.Frame):
 
             #add player to video_field
 
-            self.volume_scale.config(state=Tkinter.NORMAL)
+            self.volume_scale.state(['!disabled'])
             self.volume_scale.set(100)
             #Blocks until playback is done
             self.player.play(stream)
 
 
-        search_frame = Tkinter.LabelFrame(self.parent, text=' Search streamer ')
+        search_frame = ttk.LabelFrame(self.parent, text=' Search streamer ')
         search_frame.grid(sticky="we")
-        search_field = Tkinter.Entry(search_frame)
+        search_field = ttk.Entry(search_frame)
         search_field.grid(row=0, column = 0, sticky="we")
-        self.stream_status = Tkinter.Label(search_frame, text='Waiting for streamer nickname ...', width=100)
+        self.stream_status = ttk.Label(search_frame, text='Waiting for streamer nickname ...', width=100)
         self.stream_status.grid(row=0, column=1)
-        self.quality_o = Tkinter.StringVar(search_frame)
-        self.quality_combobox = ttk.Combobox(search_frame, state=Tkinter.DISABLED, textvariable = self.quality_o)
+        self.quality_o = ttk.Tkinter.StringVar(search_frame)
+        self.quality_combobox = ttk.Combobox(search_frame, textvariable = self.quality_o)
+        self.quality_combobox.state(["disabled"])
         self.quality_combobox.grid(row=0, column=3, columnspan = 2)
-        self.start_button = Tkinter.Button(search_frame, text='Start Stream', state=Tkinter.DISABLED, command=start_stream )
+        self.start_button = ttk.Button(search_frame, text='Start Stream', command=start_stream )
+        self.start_button.state(["disabled"])
         self.start_button.grid(row=1, column = 3)
-        self.stop_button = Tkinter.Button(search_frame, text='Stop', state=Tkinter.DISABLED, command=stop_stream)
+        self.stop_button = ttk.Button(search_frame, text='Stop', command=stop_stream)
+        self.stop_button.state(["disabled"])
         self.stop_button.grid(row=1, column = 4)
-        volume_label = Tkinter.Label(search_frame, text=' Volume ')
+        volume_label = ttk.Label(search_frame, text=' Volume ')
         volume_label.grid(row=0, column=5)
-        self.volume_scale = Tkinter.Scale(search_frame, from_=0, to=100, command=set_vol, orient=Tkinter.HORIZONTAL, state=Tkinter.DISABLED)
-        
+        self.volume_scale = ttk.Scale(search_frame, from_=0, to=100, command=set_vol)
+        self.volume_scale.state(["disabled"])
         self.volume_scale.grid(row=1, column = 5)
 
         def start_search():
@@ -208,13 +212,13 @@ class MainFrame(Tkinter.Frame):
                 else:
                     update_options()
                     self.stream_status.config(text='Select stream quality ...')
-                    self.start_button.config(state=Tkinter.NORMAL)
-                    self.stop_button.config(state=Tkinter.NORMAL)
+                    self.start_button.state(["!disabled"])
+                    self.stop_button.state(["!disabled"])
 
 
 
 
-        search_button = Tkinter.Button(search_frame, text='Search streamer',
+        search_button = ttk.Button(search_frame, text='Search streamer',
                                 command=start_search)
         search_button.grid(row=1, column=0)
 
@@ -248,7 +252,7 @@ class MainFrame(Tkinter.Frame):
 
 
 def main():
-    window_master = Tkinter.Tk()
+    window_master = ttk.Tkinter.Tk()
     print 'master window created ...'
     app = MainFrame(window_master)
     # Gdk.threads_init()
