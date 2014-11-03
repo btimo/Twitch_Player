@@ -2,11 +2,13 @@ from livestreamer import Livestreamer, StreamError, PluginError, NoPluginError
 
 import gi
 gi.require_version('Gst', '1.0')
-from gi.repository import GObject as gobject, Gst as gst, GstVideo, Gdk
+from gi.repository import GObject as gobject, Gst as gst, GstVideo, Gdk, GstAudio
 
-import Tkinter, sys
+import Tkinter, sys, ttk
 
 gst.init(None)
+
+
 
 
 class LivestreamerPlayer(object):
@@ -99,6 +101,11 @@ class LivestreamerPlayer(object):
         error = msg.parse_error()[1]
         self.exit(error)
 
+    def set_volume(self, vol):
+        self.pipeline.set_property('volume', vol)
+
+
+
 class MainFrame(Tkinter.Frame):
     def __init__(self, parent):
         Tkinter.Frame.__init__(self, parent)
@@ -107,21 +114,71 @@ class MainFrame(Tkinter.Frame):
         self.initUI()
 
     def initUI(self):
+
+        def set_vol(vol):
+            if self.watching:
+                self.player.set_volume(float(vol) / 100)
+
+
+        def update_options():
+            opts = self.streams.keys()
+            opts.sort()
+            #set default quality to best
+            self.quality_o.set('best')
+            self.quality_combobox.config(values=opts, state=Tkinter.NORMAL)
+
+        def stop_stream():
+            if self.watching:
+                self.player.stop()
+                self.watching = False
+
+
+        def start_stream():
+            if not self.watching:
+                self.watching = True
+                self.stream_status.config(text='Watching ' + search_field.get())
+            else:
+                stop_stream()
+            #fixer probleme de double stream.
+            #faire varialbe classe pour empecher ca.
+            
+            stream = self.streams[self.quality_o.get()]
+
+            #Create the player and start playback
+            self.player = LivestreamerPlayer(self.window_handle_id)
+
+            #add player to video_field
+
+            self.volume_scale.config(state=Tkinter.NORMAL)
+            self.volume_scale.set(100)
+            #Blocks until playback is done
+            self.player.play(stream)
+
+
         search_frame = Tkinter.LabelFrame(self.parent, text=' Search streamer ')
         search_frame.grid(sticky="we")
         search_field = Tkinter.Entry(search_frame)
-        search_field.grid(sticky="we")
-
+        search_field.grid(row=0, column = 0, sticky="we")
+        self.stream_status = Tkinter.Label(search_frame, text='Waiting for streamer nickname ...', width=100)
+        self.stream_status.grid(row=0, column=1)
+        self.quality_o = Tkinter.StringVar(search_frame)
+        self.quality_combobox = ttk.Combobox(search_frame, state=Tkinter.DISABLED, textvariable = self.quality_o)
+        self.quality_combobox.grid(row=0, column=3, columnspan = 2)
+        self.start_button = Tkinter.Button(search_frame, text='Start Stream', state=Tkinter.DISABLED, command=start_stream )
+        self.start_button.grid(row=1, column = 3)
+        self.stop_button = Tkinter.Button(search_frame, text='Stop', state=Tkinter.DISABLED, command=stop_stream)
+        self.stop_button.grid(row=1, column = 4)
+        volume_label = Tkinter.Label(search_frame, text=' Volume ')
+        volume_label.grid(row=0, column=5)
+        self.volume_scale = Tkinter.Scale(search_frame, from_=0, to=100, command=set_vol, orient=Tkinter.HORIZONTAL, state=Tkinter.DISABLED)
+        
+        self.volume_scale.grid(row=1, column = 5)
 
         def start_search():
-            if not self.watching:
-                self.watching = True
-            else:
-                self.player.stop()
-
             if search_field:
-                quality = 'best'
-                url = 'http://twitch.tv/' + search_field.get()
+                url = 'http://twitch.tv/' + str(search_field.get())
+                self.stream_status.config(text='Searching streamer '+ search_field.get() +' ...')
+               
                 #create livestreamer session
                 livestreamer = Livestreamer()
 
@@ -131,36 +188,35 @@ class MainFrame(Tkinter.Frame):
 
                 #attempt to fetch stream
                 try:
-                    streams = livestreamer.streams(url)
+                    self.streams = livestreamer.streams(url)
                 except NoPluginError:
                     print "Livestreamer is unable to handle the url " + url
                 except PluginError as err:
-                    print 'Plugin error: ' + err
+                    print 'Plugin error: ' + str(err)
 
-                if not streams:
+                if not self.streams:
                     print 'No streams found on URL ' + url
+                    self.stream_status.config(text='Streamer '+ search_field.get() + ' is offline ...')
 
                 #Look for specific quality
-                if quality not in streams:
-                    print "unable to find '{0}' stream on URL '{1}'".format(
-                                                                quality, url)
+                # if quality not in streams:
+                #     print "unable to find '{0}' stream on URL '{1}'".format(
+                #                                                 quality, url)
 
                 #We found the stream
-                stream = streams[quality]
+                #search for all the quality options
+                else:
+                    update_options()
+                    self.stream_status.config(text='Select stream quality ...')
+                    self.start_button.config(state=Tkinter.NORMAL)
+                    self.stop_button.config(state=Tkinter.NORMAL)
 
-                #Create the player and start playback
-                self.player = LivestreamerPlayer(self.window_handle_id)
 
-                #add player to video_field
-
-
-                #Blocks until playback is done
-                self.player.play(stream)
 
 
         search_button = Tkinter.Button(search_frame, text='Search streamer',
                                 command=start_search)
-        search_button.grid(pady=8)
+        search_button.grid(row=1, column=0)
 
         print 'search frame created'
 
