@@ -11,6 +11,7 @@ gst.init(None)
 
 
 
+
 class LivestreamerPlayer(object):
     def __init__(self, window_id):
         self.fd = None
@@ -111,9 +112,29 @@ class MainFrame(ttk.Frame):
         ttk.Frame.__init__(self, parent)
         self.parent = parent
         self.watching = False
+        self.fullscreen_bool = False
         self.initUI()
+        self.update_geo()
+
 
     def initUI(self):
+
+        def undo_fullscreen(key):
+            self.parent.overrideredirect(False)
+            self.parent.geometry('{0}x{1}+0+0'.format(self.current_width, self.current_height))
+            self.fullscreen_bool = False
+
+        def fullscreen_video():
+            if self.fullscreen_bool:
+                undo_fullscreen('')
+            else:
+                self.fullscreen_bool = True
+                self.parent.overrideredirect(True)
+                self.update_geo()
+                self.parent.geometry('{0}x{1}+0+0'.format(self.parent.winfo_screenwidth(), self.parent.winfo_screenheight()))
+
+
+
 
         def set_vol(vol):
             if self.watching:
@@ -138,22 +159,25 @@ class MainFrame(ttk.Frame):
             if not self.watching:
                 self.watching = True
                 self.stream_status.config(text='Watching ' + search_field.get())
+
+                #fixer probleme de double stream.
+                #faire varialbe classe pour empecher ca.
+                
+                stream = self.streams[self.quality_o.get()]
+
+                #Create the player and start playback
+                self.player = LivestreamerPlayer(self.window_handle_id)
+
+                #add player to video_field
+
+                self.volume_scale.state(['!disabled'])
+                self.volume_scale.set(50)
+                #Blocks until playback is done
+                self.player.play(stream)
+
             else:
                 stop_stream()
-            #fixer probleme de double stream.
-            #faire varialbe classe pour empecher ca.
             
-            stream = self.streams[self.quality_o.get()]
-
-            #Create the player and start playback
-            self.player = LivestreamerPlayer(self.window_handle_id)
-
-            #add player to video_field
-
-            self.volume_scale.state(['!disabled'])
-            self.volume_scale.set(100)
-            #Blocks until playback is done
-            self.player.play(stream)
 
 
         search_frame = ttk.LabelFrame(self.parent, text=' Search streamer ')
@@ -177,6 +201,8 @@ class MainFrame(ttk.Frame):
         self.volume_scale = ttk.Scale(search_frame, from_=0, to=100, command=set_vol)
         self.volume_scale.state(["disabled"])
         self.volume_scale.grid(row=1, column = 5)
+        fullscreen_button = ttk.Button(search_frame, text='fullscreen', command=fullscreen_video)
+        fullscreen_button.grid(row=0, column=6)
 
         def start_search():
             if search_field:
@@ -225,17 +251,20 @@ class MainFrame(ttk.Frame):
         print 'search frame created'
 
         # creation d'une frame pour livestreamer/gstreamer
-        video_lframe = Tkinter.LabelFrame(self.parent, text=' Stream ')
+        video_lframe = ttk.LabelFrame(self.parent, text=' Stream ')
         video_lframe.grid(row=1, column=0, sticky="nswe")
         self.parent.columnconfigure(0, weight=1)
         self.parent.rowconfigure(1, weight=1)
-        video_frame = Tkinter.Frame(video_lframe, width=768, height=564, bg='black')
-        video_frame.pack(fill='both', expand=1)
+        self.video_frame = ttk.Frame(video_lframe, width=768, height=564)
+        self.video_frame.pack(fill='both', expand=1)
         print 'video frame created ...'
 
-        self.window_handle_id = video_frame.winfo_id()
+        self.window_handle_id = self.video_frame.winfo_id()
 
-        print 'video window handle id:', video_frame.winfo_id()
+        print 'video window handle id:', self.video_frame.winfo_id()
+
+        self.parent.bind('<Escape>', undo_fullscreen)
+
 
         # stream settings panel
         # quality settings
@@ -246,8 +275,10 @@ class MainFrame(ttk.Frame):
 
         # stop
 
-
-
+    def update_geo(self):
+        self.parent.update()
+        self.current_height = self.parent.winfo_height()
+        self.current_width = self.parent.winfo_width()
 
 
 
@@ -257,6 +288,8 @@ def main():
     app = MainFrame(window_master)
     # Gdk.threads_init()
     window_master.mainloop()
+
+
 
 
 
