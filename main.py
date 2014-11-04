@@ -113,28 +113,57 @@ class MainFrame(ttk.Frame):
         self.parent = parent
         self.watching = False
         self.fullscreen_bool = False
+        self.video_focused = False
         self.initUI()
         self.update_geo()
+        self.video_frame.focus_set()
+        # print 'here'
+        self.video_winfo_id = self.parent.focus_get()
+        # print 'there'
+        # print self.parent.focus_get()
+        self.search_field.focus_set()
 
 
     def initUI(self):
+        def clicked(event):
+            if self.parent.focus_get() != self.video_winfo_id:
+                # print 'video not focused'
+                self.video_focused = False
+
+        def focus_video_frame(event):
+            self.video_frame.focus_set()
+            self.video_focused = True
+            # print 'video frame focused'
 
         def undo_fullscreen(key):
-            self.parent.overrideredirect(False)
-            self.parent.geometry('{0}x{1}+0+0'.format(self.current_width, self.current_height))
-            self.fullscreen_bool = False
-
-        def fullscreen_video():
             if self.fullscreen_bool:
+                self.search_frame.grid(row=0)
+                self.parent.overrideredirect(False)
+                self.parent.geometry('{0}x{1}+0+0'.format(self.current_width, self.current_height))
+                self.fullscreen_bool = False
+
+        def fullscreen_video(*key):
+            if self.fullscreen_bool and self.player:
                 undo_fullscreen('')
-            else:
+            elif self.player:
+                self.search_frame.grid_forget()
                 self.fullscreen_bool = True
                 self.parent.overrideredirect(True)
                 self.update_geo()
                 self.parent.geometry('{0}x{1}+0+0'.format(self.parent.winfo_screenwidth(), self.parent.winfo_screenheight()))
 
 
-
+        def set_vol_mouse(event):
+            if self.watching and self.video_focused:
+                current_vol = self.player.pipeline.get_property('volume') * 100
+                #wheel vers le bas -> baisse le son
+                if event.delta == -120 and current_vol > 0:
+                    set_vol(current_vol - 5)
+                    self.volume_scale.set(current_vol - 5)
+                #wheel vers le haut -> monte le son
+                elif event.delta == 120 and current_vol < 100 :
+                    set_vol(current_vol + 5)
+                    self.volume_scale.set(current_vol + 5)
 
         def set_vol(vol):
             if self.watching:
@@ -158,7 +187,7 @@ class MainFrame(ttk.Frame):
         def start_stream():
             if not self.watching:
                 self.watching = True
-                self.stream_status.config(text='Watching ' + search_field.get())
+                self.stream_status.config(text='Watching ' + self.search_field.get())
 
                 #fixer probleme de double stream.
                 #faire varialbe classe pour empecher ca.
@@ -180,34 +209,34 @@ class MainFrame(ttk.Frame):
             
 
 
-        search_frame = ttk.LabelFrame(self.parent, text=' Search streamer ')
-        search_frame.grid(sticky="we")
-        search_field = ttk.Entry(search_frame)
-        search_field.grid(row=0, column = 0, sticky="we")
-        self.stream_status = ttk.Label(search_frame, text='Waiting for streamer nickname ...', width=100)
+        self.search_frame = ttk.LabelFrame(self.parent, text=' Search streamer ')
+        self.search_frame.grid(sticky="we")
+        self.search_field = ttk.Entry(self.search_frame)
+        self.search_field.grid(row=0, column = 0, sticky="we")
+        self.stream_status = ttk.Label(self.search_frame, text='Waiting for streamer nickname ...', width=100)
         self.stream_status.grid(row=0, column=1)
-        self.quality_o = ttk.Tkinter.StringVar(search_frame)
-        self.quality_combobox = ttk.Combobox(search_frame, textvariable = self.quality_o)
+        self.quality_o = ttk.Tkinter.StringVar(self.search_frame)
+        self.quality_combobox = ttk.Combobox(self.search_frame, textvariable = self.quality_o)
         self.quality_combobox.state(["disabled"])
         self.quality_combobox.grid(row=0, column=3, columnspan = 2)
-        self.start_button = ttk.Button(search_frame, text='Start Stream', command=start_stream )
+        self.start_button = ttk.Button(self.search_frame, text='Start Stream', command=start_stream )
         self.start_button.state(["disabled"])
         self.start_button.grid(row=1, column = 3)
-        self.stop_button = ttk.Button(search_frame, text='Stop', command=stop_stream)
+        self.stop_button = ttk.Button(self.search_frame, text='Stop', command=stop_stream)
         self.stop_button.state(["disabled"])
         self.stop_button.grid(row=1, column = 4)
-        volume_label = ttk.Label(search_frame, text=' Volume ')
+        volume_label = ttk.Label(self.search_frame, text=' Volume ')
         volume_label.grid(row=0, column=5)
-        self.volume_scale = ttk.Scale(search_frame, from_=0, to=100, command=set_vol)
+        self.volume_scale = ttk.Scale(self.search_frame, from_=0, to=100, command=set_vol)
         self.volume_scale.state(["disabled"])
         self.volume_scale.grid(row=1, column = 5)
-        fullscreen_button = ttk.Button(search_frame, text='fullscreen', command=fullscreen_video)
+        fullscreen_button = ttk.Button(self.search_frame, text='fullscreen', command=fullscreen_video)
         fullscreen_button.grid(row=0, column=6)
 
         def start_search():
-            if search_field:
-                url = 'http://twitch.tv/' + str(search_field.get())
-                self.stream_status.config(text='Searching streamer '+ search_field.get() +' ...')
+            if self.search_field:
+                url = 'http://twitch.tv/' + str(self.search_field.get())
+                self.stream_status.config(text='Searching streamer '+ self.search_field.get() +' ...')
                
                 #create livestreamer session
                 livestreamer = Livestreamer()
@@ -226,7 +255,7 @@ class MainFrame(ttk.Frame):
 
                 if not self.streams:
                     print 'No streams found on URL ' + url
-                    self.stream_status.config(text='Streamer '+ search_field.get() + ' is offline ...')
+                    self.stream_status.config(text='Streamer '+ self.search_field.get() + ' is offline ...')
 
                 #Look for specific quality
                 # if quality not in streams:
@@ -244,26 +273,37 @@ class MainFrame(ttk.Frame):
 
 
 
-        search_button = ttk.Button(search_frame, text='Search streamer',
+        search_button = ttk.Button(self.search_frame, text='Search streamer',
                                 command=start_search)
         search_button.grid(row=1, column=0)
 
-        print 'search frame created'
+        # print 'search frame created'
 
         # creation d'une frame pour livestreamer/gstreamer
-        video_lframe = ttk.LabelFrame(self.parent, text=' Stream ')
-        video_lframe.grid(row=1, column=0, sticky="nswe")
+        self.video_frame = ttk.Frame(self.parent, width=768, height=564)
+        self.video_frame.grid(row=1, sticky='nswe')
+
+        #search frame should grow columnwise
         self.parent.columnconfigure(0, weight=1)
         self.parent.rowconfigure(1, weight=1)
-        self.video_frame = ttk.Frame(video_lframe, width=768, height=564)
-        self.video_frame.pack(fill='both', expand=1)
-        print 'video frame created ...'
+        # self.columnconfigure(0, weight=1)
+        #video frame should grow columnwise and rowwise
+
+
+        # print 'video frame created ...'
 
         self.window_handle_id = self.video_frame.winfo_id()
 
-        print 'video window handle id:', self.video_frame.winfo_id()
+        # print 'video window handle id:', self.video_frame.winfo_id()
 
+
+        #Key binding
+        #Escape -> undo fullscreen
         self.parent.bind('<Escape>', undo_fullscreen)
+        self.video_frame.bind('<Double-Button-1>', fullscreen_video)
+        self.parent.bind_all('<MouseWheel>', set_vol_mouse)
+        self.parent.bind_all('<Button-1>', clicked)
+        self.video_frame.bind('<Button-1>', focus_video_frame)
 
 
         # stream settings panel
@@ -284,7 +324,7 @@ class MainFrame(ttk.Frame):
 
 def main():
     window_master = ttk.Tkinter.Tk()
-    print 'master window created ...'
+    # print 'master window created ...'
     app = MainFrame(window_master)
     # Gdk.threads_init()
     window_master.mainloop()
