@@ -19,26 +19,37 @@ class LivestreamerPlayer(object):
 
         # This creates a playbin pipeline and using the appsrc source
         # we can feed it our stream data
-        self.pipeline = gst.ElementFactory.make("playbin", None)
-        self.pipeline.set_property('video-sink', None)
-        self.pipeline.set_property("uri", "appsrc://")
+        self.pipeline = gst.Pipeline()
+       
+
+        #create Bus to get event from Gstreamer Pipeline
+        self.bus = self.pipeline.get_bus()
+        self.bus.add_signal_watch()
+        self.bus.connect("message::eos", self.on_eos)
+        self.bus.connect("message::error", self.on_error)
+
+        # Needed for video output
+        self.bus.enable_sync_message_emission()
+        self.bus.connect("sync-message::element", self.on_sync_message)
+
+
+        # Create Gstreamer elements
+        self.playbin = gst.ElementFactory.make("playbin", None)
+
+        #add element to the pipeline
+        self.pipeline.add(self.playbin)
+        
+        #Set uri properties
+        self.playbin.set_property("uri", "appsrc://")
 
         # When the playbin creates the appsrc source it will call
         # this callback and allow us to configure it
-        self.pipeline.connect("source-setup", self.on_source_setup)
+        self.playbin.connect("source-setup", self.on_source_setup)
 
-        # Creates a bus and set callbacks to receive errors
-        self.bus = self.pipeline.get_bus()
-        self.bus.add_signal_watch()
-        self.bus.enable_sync_message_emission()
-        self.bus.connect("message::eos", self.on_eos)
-        self.bus.connect("message::error", self.on_error)
-        self.bus.connect("sync-message::element", self.on_sync_message)
-        print 'bus connected ...'
+       
 
     def exit(self, msg):
         self.stop()
-        exit(msg)
 
     def stop(self):
         # Stop playback and exit mainloop
@@ -59,8 +70,6 @@ class LivestreamerPlayer(object):
         self.pipeline.set_state(gst.State.PLAYING)
 
     def on_sync_message(self, bus, message):
-        print 'got sync'
-
         if message.get_structure() is None:
             return
 
@@ -105,6 +114,58 @@ class LivestreamerPlayer(object):
     def set_volume(self, vol):
         self.pipeline.set_property('volume', vol)
 
+class toolbarFrame(ttk.Frame):
+    def __init__(self, parent):
+        ttk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.quality_options = None
+        self.volume_scale_value = 50
+        self.initUI()
+
+    def start_player(self):
+        self.parent.start_stream()
+
+    def stop_player(self):
+        self.parent.stop_stream()
+
+    def go_fullscreen(self):
+        self.parent.fullscreen_video()
+
+    def set_volume(vol):
+        self.parent.player.set_volume(float (vol) / 100)
+
+
+    def set_quality_options(self, list_):
+        self.quality_options = list_
+        self.quality_combobox.config(values=self.quality_options)
+        self.quality_combobox.set('best')
+
+    def initUI(self):
+
+        # Play button
+        self.play_button = ttk.Button(self, text='P', command=self.start_player)
+        self.play_button.grid(row=0, column=0)
+        # Stop Button
+        self.stop_button = ttk.Button(self, text='S', command=self.stop_player)
+        self.stop_button.grid(row=0, column = 1)
+
+        # fullscreen button
+        self.fullscreen_button = ttk.Button(self, text='F', command=self.go_fullscreen)
+        self.fullscreen_button.grid(row=0, column=2)
+        # Quality combobox
+        self.quality_combobox = ttk.Combobox(self, values=self.quality_options)
+        self.quality_combobox.grid(row=0, column=4)
+
+        # volume scale
+        self.volume_scale = ttk.Scale(self, from_=0, to=100, command=self.set_volume)
+        self.volume_scale.grid(row=0, column=5)
+        self.volume_label = ttk.Label(self, text=self.volume_scale.get())
+        self.volume_label.grid(row=0, column=6)
+
+    
+
+
+
 
 
 class MainFrame(ttk.Frame):
@@ -122,6 +183,35 @@ class MainFrame(ttk.Frame):
         # print 'there'
         # print self.parent.focus_get()
         self.search_field.focus_set()
+
+
+    def start_stream():
+        if not self.watching:
+            self.watching = True
+            self.stream_status.config(text='Watching ' + self.search_field.get())
+
+            #fixer probleme de double stream.
+            #faire varialbe classe pour empecher ca.
+            
+            stream = self.streams[self.quality_o.get()]
+
+            #Create the player and start playback
+            self.player = LivestreamerPlayer(self.window_handle_id)
+
+            #add player to video_field
+
+            self.volume_scale.state(['!disabled'])
+            self.volume_scale.set(50)
+            #Blocks until playback is done
+            self.player.play(stream)
+
+        else:
+            self.stop_stream()
+
+    def stop_stream():
+        if self.watching:
+            self.player.stop()
+            self.watching = False
 
 
     def initUI(self):
@@ -174,64 +264,13 @@ class MainFrame(ttk.Frame):
             opts = self.streams.keys()
             opts.sort()
             #set default quality to best
-            self.quality_o.set('best')
-            self.quality_combobox.config(values=opts)
-            self.quality_combobox.state(["!disabled"])
+            self.toolbar_frame.set_quality_options(opts)
 
-        def stop_stream():
-            if self.watching:
-                self.player.stop()
-                self.watching = False
+        
 
 
-        def start_stream():
-            if not self.watching:
-                self.watching = True
-                self.stream_status.config(text='Watching ' + self.search_field.get())
+        
 
-                #fixer probleme de double stream.
-                #faire varialbe classe pour empecher ca.
-                
-                stream = self.streams[self.quality_o.get()]
-
-                #Create the player and start playback
-                self.player = LivestreamerPlayer(self.window_handle_id)
-
-                #add player to video_field
-
-                self.volume_scale.state(['!disabled'])
-                self.volume_scale.set(50)
-                #Blocks until playback is done
-                self.player.play(stream)
-
-            else:
-                stop_stream()
-            
-
-
-        self.search_frame = ttk.LabelFrame(self.parent, text=' Search streamer ')
-        self.search_frame.grid(sticky="we")
-        self.search_field = ttk.Entry(self.search_frame)
-        self.search_field.grid(row=0, column = 0, sticky="we")
-        self.stream_status = ttk.Label(self.search_frame, text='Waiting for streamer nickname ...', width=100)
-        self.stream_status.grid(row=0, column=1)
-        self.quality_o = ttk.Tkinter.StringVar(self.search_frame)
-        self.quality_combobox = ttk.Combobox(self.search_frame, textvariable = self.quality_o)
-        self.quality_combobox.state(["disabled"])
-        self.quality_combobox.grid(row=0, column=3, columnspan = 2)
-        self.start_button = ttk.Button(self.search_frame, text='Start Stream', command=start_stream )
-        self.start_button.state(["disabled"])
-        self.start_button.grid(row=1, column = 3)
-        self.stop_button = ttk.Button(self.search_frame, text='Stop', command=stop_stream)
-        self.stop_button.state(["disabled"])
-        self.stop_button.grid(row=1, column = 4)
-        volume_label = ttk.Label(self.search_frame, text=' Volume ')
-        volume_label.grid(row=0, column=5)
-        self.volume_scale = ttk.Scale(self.search_frame, from_=0, to=100, command=set_vol)
-        self.volume_scale.state(["disabled"])
-        self.volume_scale.grid(row=1, column = 5)
-        fullscreen_button = ttk.Button(self.search_frame, text='fullscreen', command=fullscreen_video)
-        fullscreen_button.grid(row=0, column=6)
 
         def start_search():
             if self.search_field:
@@ -267,8 +306,21 @@ class MainFrame(ttk.Frame):
                 else:
                     update_options()
                     self.stream_status.config(text='Select stream quality ...')
-                    self.start_button.state(["!disabled"])
-                    self.stop_button.state(["!disabled"])
+            
+
+
+        self.search_frame = ttk.LabelFrame(self.parent, text=' Search streamer ')
+        self.search_frame.grid(sticky="we")
+        self.search_field = ttk.Entry(self.search_frame)
+        self.search_field.grid(row=0, column = 0, sticky="we")
+        self.stream_status = ttk.Label(self.search_frame, text='Waiting for streamer nickname ...', width=100)
+        self.stream_status.grid(row=0, column=1)
+
+        self.toolbar_frame = toolbarFrame(self.parent)
+        self.toolbar_frame.grid(row=2)
+        
+
+        
 
 
 
