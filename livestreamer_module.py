@@ -14,19 +14,21 @@ class Stream(object):
 		# stream exist ?
 		except NoPluginError:
 			print "Link error"
+			return -1
 
 		if not self.streams_dict:
 			print "Streams is offline"
-		else:
-			print self.streams_dict
+			return 0
 
+		return 1
+	
 		# stream online
 
-	def select_stream_quality(self, quality):
+	def set_quality(self, quality):
 		#choose a stream quality
 		self.quality = quality
 
-	def get_stream_quality(self):
+	def get_stream_qualities(self):
 		return self.streams_dict.keys()
 
 
@@ -38,13 +40,9 @@ class Stream(object):
 		try:
 			return self.streams_dict[self.quality]
 		except:
-			"Shouldnt be called without a stream sets up"
+			print "Stream.get_stream_file: Shouldnt be called without a stream sets up."
 
-def main():
-	stream_object = Stream()
-	stream_object.find_stream("http://twitch.tv/summit1g")
 
 
 if __name__ == '__main__':
-	main()
-	# print "a livestreamer/Gstreamer player for twitch"
+	print "a livestreamer/Gstreamer player for twitch"
