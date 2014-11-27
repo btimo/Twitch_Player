@@ -81,34 +81,29 @@ class GUI():
 
 
     def browse_search(self):
-        # # send streamer name to the livestreamer module
-        # name = self.search_entry.get()
         pass
-        # # find stream
-        # try:
-        #     self.stream_online = self.stream.find_stream('twitch.tv/'+name)
-
-        # finally:
-        #     self.stream.set_quality('best')
-        #     if self.stream_online == 0:
-        #         # offline
-        #         pass
-        #     elif self.stream_online == 1:
-        #         if not self.playing:
-        #             self.play()
-        #         else:
-        #             self.stop()
-        #             self.play()
-        #         # online
-        #     else:
-        #         # not a valid link
-        #         pass
-
-        # #activate play and pause button
-        # self.play_button.config(state=tk.NORMAL)
-        # self.pause_button.config(state=tk.NORMAL)
-
+        
     # Main Window construction
+    def create_left_side_panel(self):
+        print "left side panel"
+        # recreate the left panel of twitch:
+        self.left_pane = tk.Frame(self.root, width=150)
+        # - Search
+        self.search_entry = tk.Entry(self.left_pane)
+        self.search_entry.pack(fill=tk.X)
+        search_button = tk.Button(self.left_pane, text='Search', command=self.browse_search)
+        search_button.pack(fill=tk.X)
+        # - Following
+        # - Games
+        games_button = tk.Button(self.left_pane, text='Games', command=lambda: self.browse_games())
+        games_button.pack(fill=tk.X, side=tk.TOP)
+        # - Channel
+        channels_button = tk.Button(self.left_pane, text='Channels', command=self.browse_channels)
+        channels_button.pack(fill=tk.X, side=tk.TOP)
+        # - User
+
+        # add left side panel to root
+        self.left_pane.pack(fill=tk.Y, side=tk.LEFT)
 
     # MainFrame when browsing
     def create_table(self, object_list, next_list):
@@ -130,9 +125,8 @@ class GUI():
             tk.Grid.rowconfigure(self.table_frame,i//max_col,weight=1, minsize=100)
             i += 1
         # make button for accessing the next games 
-        tk.Button(self.table_frame, text='Next games', command=lambda: self.browse_games(next_list['offset']) if isinstance(elem, browse_module.Game) else self.browse_channels(elem, next_list['offset'])).grid(row=(i//max_col), column=(i%max_col), sticky=tk.N+tk.S+tk.E+tk.W, padx=pad, pady=pad)
-
-        # if browsing channels
+        tk.Button(self.table_frame, text='Next games', command=lambda: self.browse_games(next_list['offset']) if isinstance(elem, browse_module.Game) 
+            else self.browse_channels(elem, next_list['offset'])).grid(row=(i//max_col), column=(i%max_col), sticky=tk.N+tk.S+tk.E+tk.W, padx=pad, pady=pad)
 
 
     def create_browsing_panel(self):
@@ -154,45 +148,6 @@ class GUI():
 
 
     # MainFrame when watching
-    def create_watching_frame(self):
-        # left side pane
-        # create video frame
-        pass
-        # create controller frame
-        # create irc frame
-
-    # def create_top_frame(self):
-    #     search_frame = tk.Frame(self.root)
-    #     self.streamer_entry = tk.Entry(search_frame)
-    #     streamer_button = tk.Button(search_frame, text='search streamer', command=self.search)
-    #     self.streamer_entry.pack()
-    #     streamer_button.pack()
-    #     search_frame.pack()
-
-    def create_left_side_panel(self):
-        print "left side panel"
-        # recreate the left panel of twitch:
-        self.left_pane = tk.Frame(self.root, width=150)
-        # - Search
-        self.search_entry = tk.Entry(self.left_pane)
-        self.search_entry.pack(fill=tk.X)
-        search_button = tk.Button(self.left_pane, text='Search', command=self.browse_search)
-        search_button.pack(fill=tk.X)
-        # - Following
-        # - Games
-        games_button = tk.Button(self.left_pane, text='Games', command=lambda: self.browse_games())
-        games_button.pack(fill=tk.X, side=tk.TOP)
-        # - Channel
-        channels_button = tk.Button(self.left_pane, text='Channels', command=self.browse_channels)
-        channels_button.pack(fill=tk.X, side=tk.TOP)
-        # - User
-
-        # add left side panel to root
-        self.left_pane.pack(fill=tk.Y, side=tk.LEFT)
-        
-       
-
-
     def create_playing_frame(self):
         self.play_frame = tk.Frame()
         # video frame
@@ -203,23 +158,14 @@ class GUI():
 
 
     def create_player_frame(self):
-        player_frame = tk.Frame(self.main_frame)
+        # setting empty bg fix flickering
+        player_frame = tk.Frame(self.main_frame, bg='')
         player_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.player_frame_id = player_frame.winfo_id()
 
-    def create_bottom_frame(self):
-        bottom_frame = tk.Frame(self.root)
-        self.play_button = tk.Button(bottom_frame, text='Play', state=tk.DISABLED , command=self.play)
-        self.pause_button = tk.Button(bottom_frame, text='Pause', state=tk.DISABLED , command=self.stop)
-        self.play_button.pack()
-        self.pause_button.pack()
-        bottom_frame.pack()
 
     def defaultUI(self):
         print "default ui"
-        # self.create_top_frame()
-        # self.create_player_frame()
-        # self.create_bottom_frame()
         self.create_left_side_panel()
         print "create main frame"
         self.main_frame = tk.Frame(self.root)
