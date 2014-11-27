@@ -50,6 +50,18 @@ class Game(object):
 		return channel_list, {'link': res.json()['_links']['next'],'offset': 25 if offset == None else offset + 25}
 
 
+def request_image(url):
+	return requests.get(url).content
+
+def search_request(string):
+	res = make_request(api_root + '/search/streams', {'q': string})
+	channel_list = [Channel(elem['game'], elem['preview'], elem['channel']['mature'],
+			elem['channel']['status'], elem['channel']['logo'], elem['channel']['url'],
+			 elem['channel']['display_name'], elem['viewers'], elem['_links']['self']) for elem in res.json()['streams']]
+
+	return channel_list
+
+
 def get_games(limit=25, offset=None):
 	res = make_request(api_root+'/games/top', {'limit' : limit, 'offset' : offset})
 	game_list = [Game(elem['game']['name'], elem['game']['box']['large'], elem['game']['box']['small'], 
@@ -82,13 +94,7 @@ def make_request(link, params=None):
 # headers = {'Accept': 'application/vnd.twitchtv[.version]+json', 'Client-id': 'hash' }
 
 def main():
-	current_games_list, next_games_list = get_games()
-	for elem in current_games_list:
-		print 'game: ' + elem.name.encode('utf-8') + ', channels: ' + str(elem.channels) + ',viewers: '+ str(elem.viewers)
-
-	print next_games_list
-
-	print current_games_list[0].access_game_streams()
+	print search_request('summit1g').content
 
 if __name__=='__main__':
 	main()

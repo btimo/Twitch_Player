@@ -1,5 +1,7 @@
 import Tkinter as tk
 import ttk
+from PIL import Image, ImageTk
+from StringIO import StringIO
 import gstreamer_module, livestreamer_module, browse_module
 import gi
 from gi.repository import GObject
@@ -81,7 +83,23 @@ class GUI():
 
 
     def browse_search(self):
-        pass
+        print 'browse search'
+        channel_list = browse_module.search_request(self.search_entry.get())
+        self.browsing = True
+        self.watching = False
+
+        if self.watching:
+            print "stop watching"
+            self.stop()
+            self.watching = False
+            self.browsing = True
+            for child in self.main_frame.winfo_children():
+                child.destroy()
+            self.create_browsing_panel()
+            self.create_table(channel_list, None)
+        else:
+            self.create_table(channel_list, None)
+
         
     # Main Window construction
     def create_left_side_panel(self):
@@ -114,19 +132,27 @@ class GUI():
                 child.destroy()
         height = self.table_frame.winfo_height()
         width = self.table_frame.winfo_width()
-        col_minwidth = 100
-        max_col = width // col_minwidth
-        pad = (width % col_minwidth) // max_col
+        button_width = 136
+        button_height = 190
+        preview_width = 320
+        max_col_preview = width // preview_width
+        max_col = width // button_width
         i = 0
         # make a button for all the games in the list
         for elem in object_list:
-            tk.Button(self.table_frame, text=elem.name if isinstance(elem, browse_module.Game) else elem.display_name, command=lambda elem=elem : self.browse_channels(elem) if isinstance(elem, browse_module.Game) else self.watch_stream(elem)).grid(row=(i//max_col), column=(i%max_col), sticky=tk.N+tk.S+tk.E+tk.W, padx=pad, pady=pad)
-            tk.Grid.columnconfigure(self.table_frame,i,weight=1, minsize=100)
-            tk.Grid.rowconfigure(self.table_frame,i//max_col,weight=1, minsize=100)
+            m = max_col if isinstance(elem, browse_module.Game) else max_col_preview
+            pic = elem.pic_medium if isinstance(elem, browse_module.Game) else elem.preview
+            im = ImageTk.PhotoImage(Image.open(StringIO(browse_module.request_image(pic))))
+            but = tk.Button(self.table_frame, text=elem.name if isinstance(elem, browse_module.Game) else elem.display_name, image=im, compound=tk.TOP, height=button_height + 50,wraplength=100, command=lambda elem=elem : self.browse_channels(elem) if isinstance(elem, browse_module.Game) else self.watch_stream(elem))
+            but.image = im
+            but.grid(row=(i//m), column=(i%m), sticky=tk.N+tk.S+tk.E+tk.W)
+            # tk.Grid.columnconfigure(self.table_frame,i,weight=1, minsize=136)
+            # tk.Grid.rowconfigure(self.table_frame,i//max_col, weight=1, minsize=190)
             i += 1
         # make button for accessing the next games 
-        tk.Button(self.table_frame, text='Next games', command=lambda: self.browse_games(next_list['offset']) if isinstance(elem, browse_module.Game) 
-            else self.browse_channels(elem, next_list['offset'])).grid(row=(i//max_col), column=(i%max_col), sticky=tk.N+tk.S+tk.E+tk.W, padx=pad, pady=pad)
+        if next_list != None:
+            tk.Button(self.table_frame, text='Next games', command=lambda: self.browse_games(next_list['offset']) if isinstance(elem, browse_module.Game) 
+                else self.browse_channels(elem, next_list['offset'])).grid(row=(i//m), column=(i%m), sticky=tk.N+tk.S+tk.E+tk.W)
 
 
     def create_browsing_panel(self):
