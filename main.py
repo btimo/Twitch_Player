@@ -10,6 +10,8 @@ GObject.threads_init()
 class GUI():
     def __init__(self):
         self.root = tk.Tk()
+        self.root.minsize(300,300)
+        self.root.geometry("900x600")
         self.player = gstreamer_module.Player()
         self.stream = livestreamer_module.Stream()
         self.browsing= True
@@ -35,16 +37,48 @@ class GUI():
         pass
 
 
-    def browse_games(self):
-        #get games list and link for next list
-        games_list, next_list = browse_module.get_games()
-        # create a table
+
+    def browse_games(self, offset=None):
+        print "browse games"
+        # make request for game list
+        games_list, next_list = browse_module.get_games(None, offset)
+
+        # if watching, stop and destroy play frame
+        if self.watching:
+            print "stop watching"
+            self.stop()
+            self.watching = False
+            self.browsing = True
+            for child in self.main_frame.winfo_children():
+                child.destroy()
+            self.create_browsing_panel()
+            self.create_table(games_list, next_list)
+        else:
+            self.create_table(games_list, next_list)
+        
 
 
 
+    def browse_channels(self, elem, offset=None):
+        print "browse channels"
+        channel_list, next_list = elem.access_game_streams(offset)
+        self.create_table(channel_list, next_list)
 
-    def browse_channels(self):
-        pass
+    def watch_stream(self, elem):
+        print "watch stream"
+        self.browsing = False
+        self.watching = True
+        #clear main_frame
+        for child in self.main_frame.winfo_children():
+            child.destroy()
+
+        # create player frame
+        self.create_playing_frame()
+        self.stream.find_stream(elem.url)
+        self.stream.set_quality('best')
+
+        self.play()
+
 
     def browse_search(self):
         # # send streamer name to the livestreamer module
@@ -77,11 +111,47 @@ class GUI():
     # Main Window construction
 
     # MainFrame when browsing
-    def create_browsing_frame(self):
+    def create_table(self, object_list, next_list):
+        print "create_table"
+        # if browsing game
+        if self.table_frame.winfo_children():
+            for child in self.table_frame.winfo_children():
+                child.destroy()
+        height = self.table_frame.winfo_height()
+        width = self.table_frame.winfo_width()
+        col_minwidth = 100
+        max_col = width // col_minwidth
+        pad = (width % col_minwidth) // max_col
+        i = 0
+        # make a button for all the games in the list
+        for elem in object_list:
+            tk.Button(self.table_frame, text=elem.name if isinstance(elem, browse_module.Game) else elem.display_name, command=lambda elem=elem : self.browse_channels(elem) if isinstance(elem, browse_module.Game) else self.watch_stream(elem)).grid(row=(i//max_col), column=(i%max_col), sticky=tk.N+tk.S+tk.E+tk.W, padx=pad, pady=pad)
+            tk.Grid.columnconfigure(self.table_frame,i,weight=1, minsize=100)
+            tk.Grid.rowconfigure(self.table_frame,i//max_col,weight=1, minsize=100)
+            i += 1
+        # make button for accessing the next games 
+        tk.Button(self.table_frame, text='Next games', command=lambda: self.browse_games(next_list['offset']) if isinstance(elem, browse_module.Game) else self.browse_channels(elem, next_list['offset'])).grid(row=(i//max_col), column=(i%max_col), sticky=tk.N+tk.S+tk.E+tk.W, padx=pad, pady=pad)
+
+        # if browsing channels
+
+
+    def create_browsing_panel(self):
+        print "browsing panel"
         # left pane with search entry, games button, channel button, follows button, user button
-        pass
+        self.title_bar = tk.Frame(self.main_frame)
+        self.title_bar_title_label = tk.Label(self.title_bar, text="All games")
+        self.title_bar_title_label.pack(side=tk.LEFT)
+        self.title_bar_search_entry = tk.Entry(self.title_bar)
+        self.title_bar_search_entry.pack(side=tk.RIGHT)
+        self.title_bar.pack(side=tk.TOP, fill=tk.X) 
         # mid pane with result : set size for each result, dynamic row/col with window size
         # last res is offset for more.
+        # call function to create the table
+        self.table_frame = tk.Frame(self.main_frame)
+        self.table_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+        self.root.update()
+
 
     # MainFrame when watching
     def create_watching_frame(self):
@@ -100,6 +170,7 @@ class GUI():
     #     search_frame.pack()
 
     def create_left_side_panel(self):
+        print "left side panel"
         # recreate the left panel of twitch:
         self.left_pane = tk.Frame(self.root, width=150)
         # - Search
@@ -109,7 +180,7 @@ class GUI():
         search_button.pack(fill=tk.X)
         # - Following
         # - Games
-        games_button = tk.Button(self.left_pane, text='Games', command=self.browse_games)
+        games_button = tk.Button(self.left_pane, text='Games', command=lambda: self.browse_games())
         games_button.pack(fill=tk.X, side=tk.TOP)
         # - Channel
         channels_button = tk.Button(self.left_pane, text='Channels', command=self.browse_channels)
@@ -117,7 +188,7 @@ class GUI():
         # - User
 
         # add left side panel to root
-        self.left_pane.pack(fill=tk.Y, expand=1, side=tk.LEFT)
+        self.left_pane.pack(fill=tk.Y, side=tk.LEFT)
         
        
 
@@ -127,13 +198,13 @@ class GUI():
         # video frame
         # player and control
         self.create_player_frame()
-        self.create_bottom_frame()
+        # self.create_bottom_frame()
         # chat frame
 
 
     def create_player_frame(self):
-        player_frame = tk.Frame(self.root, width=500, height=500)
-        player_frame.pack(fill=tk.BOTH, expand=1)
+        player_frame = tk.Frame(self.main_frame)
+        player_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         self.player_frame_id = player_frame.winfo_id()
 
     def create_bottom_frame(self):
@@ -145,10 +216,17 @@ class GUI():
         bottom_frame.pack()
 
     def defaultUI(self):
+        print "default ui"
         # self.create_top_frame()
         # self.create_player_frame()
         # self.create_bottom_frame()
         self.create_left_side_panel()
+        print "create main frame"
+        self.main_frame = tk.Frame(self.root)
+        self.main_frame.pack_propagate(0)
+        self.main_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        self.create_browsing_panel()
+        self.browse_games()
 
 
 def main():

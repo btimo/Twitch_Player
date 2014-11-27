@@ -41,19 +41,21 @@ class Game(object):
 		self.channels = channels
 		self.viewers = viewers
 	
-	def access_game_streams(self):
+	def access_game_streams(self, offset=None):
 		res = make_request(api_root + '/streams', {'game' : self.name, 'limit': 25, 'offset': 0})
 		channel_list = [Channel(elem['game'], elem['preview'], elem['channel']['mature'],
 			elem['channel']['status'], elem['channel']['logo'], elem['channel']['url'],
 			 elem['channel']['display_name'], elem['viewers'], elem['_links']['self']) for elem in res.json()['streams']]
+		
+		return channel_list, {'link': res.json()['_links']['next'],'offset': 25 if offset == None else offset + 25}
 
 
-def get_games():
-	res = make_request(api_root+'/games/top')
+def get_games(limit=25, offset=None):
+	res = make_request(api_root+'/games/top', {'limit' : limit, 'offset' : offset})
 	game_list = [Game(elem['game']['name'], elem['game']['box']['large'], elem['game']['box']['small'], 
 		elem['game']['box']['medium'], elem['channels'], elem['viewers']) for elem in res.json()['top']]
 
-	next_url =res.json()['_links']['next']
+	next_url = {'link': res.json()['_links']['next'],'offset': 25 if offset == None else offset + 25}
 
 	return game_list, next_url
 
