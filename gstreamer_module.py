@@ -12,7 +12,6 @@ class Player():
 		self.initGstreamer()
 
 	def initGstreamer(self):
-		print 'initGstreamer'
 		# create pipeline
 		self.pipeline = Gst.Pipeline()
 
