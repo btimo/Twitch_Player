@@ -4,13 +4,17 @@
 import requests
 # import json
 
+# app id to authenticate with twitch api
 client_id = "81gaw82lvaj8sbbkrmkxfer26pfczcz"
 
+# special headers to request a specific version of the api
+# and communicate the app id
 headers = {
     'Accept': 'application/vnd.twitchtv.v2+json',
     'Client-ID': client_id
     }
 
+# root url of the api
 api_root = "https://api.twitch.tv/kraken"
 
 
@@ -71,6 +75,7 @@ def request_image(url):
 
 
 def search_request(string):
+    # Rework this one !!
     res = make_request(api_root + '/search/streams', {'q': string})
     channel_list = [Channel(elem['game'],
                             elem['preview'],
@@ -87,10 +92,11 @@ def search_request(string):
 
 
 def get_games(limit=25, offset=None):
+    # get games list from twitch api
     res = make_request(
         api_root+'/games/top',
         {'limit': limit, 'offset': offset})
-
+    # only get the important part of the json (useful part)
     game_list = [Game(elem['game']['name'],
                       elem['game']['box']['large'],
                       elem['game']['box']['small'],
@@ -102,19 +108,26 @@ def get_games(limit=25, offset=None):
     next_url = {'link': res.json()['_links']['next'],
                 'offset': 25 if offset is None else offset + 25}
 
+    # return a list of game object and the offset for the following list
     return game_list, next_url
 
 
 def get_channels():
     pass
 
-
-def search():
+def search(type, string):
+    # search stream by game
+    # search channel
     pass
 
-
-def following():
+def followingList():
     pass
+
+def authenticate():
+    pass
+    # permissions needed:
+    # - chat_login (irc)
+    # - user_follows_edit (add/remove follows)
 
 
 def make_request(link, params=None):

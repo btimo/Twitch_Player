@@ -12,6 +12,7 @@ Gst.init(None)
 
 class Player():
     def __init__(self):
+        # fd will contain
         self.fd = None
         self.initGstreamer()
 
@@ -25,7 +26,7 @@ class Player():
         self.bus.connect('message::eos', self.on_end_of_stream)
         self.bus.connect('message::error', self.on_error)
 
-        # link pipeline output and gui frame
+        # listen to sync message to link pipeline output and gui frame
         self.bus.enable_sync_message_emission()
         self.bus.connect('sync-message::element', self.on_sync_message)
 
@@ -39,13 +40,17 @@ class Player():
         self.playbin.connect('source-setup', self.on_source_setup)
 
     def set_frame(self, frame):
+        # Gui frame id
         self.frame = frame
 
     def on_sync_message(self, bus, msg):
+        # sync message for window handle (work on windows only)
+        # need to listen for different msg on osx and linux
         if msg.get_structure().get_name() == 'prepare-window-handle':
             msg.src.set_window_handle(self.frame)
 
     def on_source_setup(self, element, source):
+        # setup appsrc
         source.connect('need-data', self.on_source_need_data)
 
     def on_source_need_data(self, source, length):
@@ -58,6 +63,7 @@ class Player():
             source.emit("end-of-stream")
             return
 
+        # stock the media data in the buffer (will be displayed by the sink)
         buf = Gst.Buffer.new_wrapped(data)
         source.emit('push-buffer', buf)
 

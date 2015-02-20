@@ -64,8 +64,12 @@ class GUI():
         for child in self.main_frame.winfo_children():
             child.destroy()
 
+        # create irc frame
+        # self.create_irc_frame()
+
         # create player frame
         self.create_playing_frame()
+        
         self.stream.find_stream(elem.url)
         self.stream.set_quality('best')
 
@@ -169,6 +173,7 @@ class GUI():
                 else self.watch_stream(elem))
             # re set the image parameter to force it to show
             but.image = im
+            but.grid_propagate(0)
             but.grid(row=(i // m),
                      column=(i % m),
                      sticky=tk.N+tk.S+tk.E+tk.W)
@@ -244,6 +249,17 @@ class GUI():
         # create player_frame
         self.create_player_frame()
         # create overlay
+
+    def create_irc_frame(self):
+        # self.irc_frame = tk.Frame(self.main_frame, width=200, bg='red')
+
+        # self.irc_text_area = tk.
+
+        # self.irc_frame.pack(side=tk.RIGHT, fill=tk.Y)
+
+        pass
+        # # init irc
+
 
     def create_player_frame(self):
         # create frame for the player
